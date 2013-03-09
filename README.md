@@ -21,7 +21,7 @@ portfolio/
      desc.mdown      # a description of some_gallery
    another_gallery/
      yap.jpg         # yet another pic
-     desc.mdown      # description of another_gallery             
+     desc.mdown      # description of another_gallery
 ```
 
 I use bundler, so in my `Gemfile`
@@ -53,15 +53,15 @@ get "/content/*" do
 end
 
 get "/:gallery" do
-  # A gallery has markdown description snippet 
+  # A gallery has markdown description snippet
   #
   file =  content_path("desc.mdown")
   if File.exists? file
     @description = Maruku.new(File.read(file)).to_html
   end
-  
+
   # ... and a bunch of jpegs...
-  # 
+  #
   @images = Dir.glob(content_path("*.{jpg,jpeg,JPG,JPEG}"))
   haml :gallery
 end
@@ -78,7 +78,7 @@ This is the `gallery.haml` partial, notice the call to `thumbnail_url_for`:
       .asset
         %a{:href => image}
           %img{:src => thumbnail_url_for(image, "200x200")}
-```  
+```
 
 That's it.
 
@@ -89,7 +89,7 @@ following tag
 
 ```
 <img src='public/thumbnails/200x200/content/some_gallery/test.png?original_extension=jpg' />
-```    
+```
 
 in the middle of the HTML I get. When a request for that particular URL is comes
 in, the ImageMagick's `convert` creates the `test.png` thumbnail from `test.jpg`
@@ -106,10 +106,14 @@ portfolio/
         content/
           some_gallery/
             test.png
-```    
+```
 
 The next time the very same URL is loaded, and unless `test.jpg` has changed in
-the meantime, the `test.png` is just served and not recreated again.
+the meantime, the following path is served instead, without query string and `public/`:
+
+```
+<img src='thumbnails/200x200/content/some_gallery/test.png' />
+```
 
 ##  Crop to Fit
 
@@ -120,9 +124,9 @@ For example, for following will create a square thumbnail with edges cropped off
 <img src='public/thumbnails/200x200-crop/content/some_gallery/test.png?original_extension=jpg' />
 ```
 
-## Contributing to sinatra-thumbnails 
+## Contributing to sinatra-thumbnails
 
-Fell free to fork and submit pull requests. 
+Fell free to fork and submit pull requests.
 
 ## Copyright
 

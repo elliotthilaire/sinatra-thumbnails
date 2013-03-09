@@ -23,15 +23,13 @@ module Sinatra
         end
       end
     end
-    
+
     def self.make_thumb(file, format, original_extension)
       original_extension ||= "jpg"
-      thumbnail_file = File.join(settings.thumbnail_path, "#{format}/#{file}")
+      thumbnail_file = get_thumbnail_file(file, format)
       FileUtils.mkdir_p File.dirname(thumbnail_file)
       orig_file = File.join(".", settings.image_path_prefix, file.gsub(/(.*\.)(.*$)/,"\\1#{original_extension}"))
-
-      unless File.exists?(thumbnail_file) and (File.stat(thumbnail_file).mtime >= File.stat(orig_file).mtime)
-        
+      unless thumbnail_exists?(thumbnail_file, orig_file)
         if original_extension =~ /mov$/
           ffmpeg(orig_file, thumbnail_file, format)
         else
@@ -41,13 +39,21 @@ module Sinatra
       thumbnail_file
     end
 
+    def self.get_thumbnail_file(file, format)
+      File.join(settings.thumbnail_path, "#{format}/#{file}")
+    end
+
+    def self.thumbnail_exists?(thumbnail_file, orig_file=nil)
+      File.exists?(thumbnail_file) and (orig_file.nil? || (File.stat(thumbnail_file).mtime >= File.stat(orig_file).mtime))
+    end
+
     def self.im_version
       `convert --version` =~ /Version: ImageMagick ([\d\.]+)/
       Regexp.last_match(1).split('.').map{|s|s.to_i}
     end
 
     def self.convert(src, dest, format)
-      if (format =~ /(.*)-crop$/) 
+      if (format =~ /(.*)-crop$/)
         if (im_version <=> [6,6,4]) >= 0
           format = "\"" + $1 + "^\"" + " -gravity center -extent " + $1
         else
@@ -59,38 +65,47 @@ module Sinatra
       puts "Sinatra::Thumbnails: issuing \"#{command}\""
       run_command(command)
     end
-    
+
     def self.ffmpeg(src, dest, format)
       puts "making movie thumb on the fly"
-      seconds = (src =~ /\.ss([\d]+)/) ? Regexp.last_match(1).to_i : 0 
+      seconds = (src =~ /\.ss([\d]+)/) ? Regexp.last_match(1).to_i : 0
       command = "#{Sinatra::Thumbnails.settings.ffmpeg_executable} -y -i \"#{src}\" -an -ss #{seconds} -r 1 -vframes 1 -f mjpeg  \"#{dest}\""
       # puts "Sinatra::Thumbnails: issuing \"#{command}\""
       run_command(command)
       convert(dest, dest, format)
     end
-    
+
     def self.run_command(command)
       output = `#{command} 2>&1`
       raise "couldn't run #{command}: #{output}" unless $?.success?
     end
 
-    
+
     def self.settings
-      @@settings ||= { :convert_executable  => 'convert'     ,   
-                       :ffmpeg_executable   => 'ffmpeg'      ,   
+      @@settings ||= { :convert_executable  => 'convert'     ,
+                       :ffmpeg_executable   => 'ffmpeg'      ,
                        :thumbnail_path      => 'public/thumbnails'  ,
                        :image_path_prefix   => ''             ,
-                       :thumbnail_extension => 'png'         ,   
-                       :thumbnail_format    => '100x100'       }.extend(Thumbnails::Settings) 
+                       :thumbnail_extension => 'png'         ,
+                       :thumbnail_format    => '100x100'       }.extend(Thumbnails::Settings)
+    end
+
+    def self.get_thumbnail_path(file, format)
+      Thumbnails.settings.thumbnail_path.dup.tap { |path|
+        path[/^public\//]='' if thumbnail_exists?(get_thumbnail_file(file, format))
+      }
     end
 
     module Helpers
       def thumbnail_url_for(asset, format = Thumbnails.settings.thumbnail_format)
         almost_original = asset.gsub(/(.*\.)(.*$)/,"\\1#{Thumbnails.settings.thumbnail_extension}")
         original_extension = Regexp.last_match(2)
-        "#{Thumbnails.settings.thumbnail_path}/#{format}/#{almost_original}?original_extension=#{original_extension}"
+        "#{Thumbnails.get_thumbnail_path(almost_original, format)}/#{format}/#{almost_original}".tap{ |url|
+          url << "?original_extension=#{original_extension}" unless Thumbnails.thumbnail_exists?(Thumbnails.get_thumbnail_file(almost_original, format))
+        }
       end
     end
+
 
     def self.registered(app)
       app.helpers Helpers
