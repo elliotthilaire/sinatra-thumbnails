@@ -109,10 +109,10 @@ portfolio/
 ```
 
 The next time the very same URL is loaded, and unless `test.jpg` has changed in
-the meantime, the following path is served instead:
+the meantime, the following path is served instead, without query string and `public/`:
 
 ```
-<img src='thumbnails/200x200/content/some_gallery/test.png?original_extension=jpg' />
+<img src='thumbnails/200x200/content/some_gallery/test.png' />
 ```
 
 ##  Crop to Fit

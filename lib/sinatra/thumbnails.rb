@@ -92,7 +92,6 @@ module Sinatra
 
     def self.get_thumbnail_path(file, format)
       Thumbnails.settings.thumbnail_path.dup.tap { |path|
-        puts "!!! #{get_thumbnail_file(file, format)} -- #{thumbnail_exists?(get_thumbnail_file(file, format))}"
         path[/^public\//]='' if thumbnail_exists?(get_thumbnail_file(file, format))
       }
     end
@@ -101,7 +100,9 @@ module Sinatra
       def thumbnail_url_for(asset, format = Thumbnails.settings.thumbnail_format)
         almost_original = asset.gsub(/(.*\.)(.*$)/,"\\1#{Thumbnails.settings.thumbnail_extension}")
         original_extension = Regexp.last_match(2)
-        "#{Thumbnails.get_thumbnail_path(almost_original, format)}/#{format}/#{almost_original}?original_extension=#{original_extension}"
+        "#{Thumbnails.get_thumbnail_path(almost_original, format)}/#{format}/#{almost_original}".tap{ |url|
+          url << "?original_extension=#{original_extension}" unless Thumbnails.thumbnail_exists?(Thumbnails.get_thumbnail_file(almost_original, format))
+        }
       end
     end
 
