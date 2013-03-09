@@ -109,7 +109,7 @@ portfolio/
 ```
 
 The next time the very same URL is loaded, and unless `test.jpg` has changed in
-the meantime, the following path is serverd instead:
+the meantime, the following path is served instead:
 
 ```
 <img src='thumbnails/200x200/content/some_gallery/test.png?original_extension=jpg' />
